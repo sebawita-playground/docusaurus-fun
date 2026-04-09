@@ -5,7 +5,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'Docusaurus funz', // making the first push to fail
+  title: 'Docusaurus fun',
   tagline: 'Sebastian is having fun',
   favicon: 'img/favicon.ico',
 
