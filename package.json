@@ -50,9 +50,5 @@
   },
   "engines": {
     "node": ">=20.0"
-  },
-  "resolutions": {
-    "chokidar": "^4.0.0",
-    "eslint-visitor-keys": "^4.0.0"
   }
 }
