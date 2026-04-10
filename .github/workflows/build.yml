@@ -13,10 +13,16 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
         node-version: '22'
-        cache: 'yarn'
+        package-manager-cache: false
+    - name: Enable Corepack
+      run: corepack enable
+    - name: Enable Namespace cache
+      uses: namespacelabs/nscloud-cache-action@v1
+      with:
+        cache: yarn
     - name: Install dependencies
       run: yarn install
     - name: Build
