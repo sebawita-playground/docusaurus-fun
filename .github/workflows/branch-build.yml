@@ -3,6 +3,16 @@ name: Build Branch
 on:
   push:
     branches-ignore: [ main ]
+    paths:
+      - 'src/**'
+      - 'docs/**'
+      - 'blog/**'
+      - 'static/**'
+      - '*.js'
+      - '*.ts'
+      - '*.json'
+      - '*.yaml'
+      - '*.yml'
 
 jobs:
   build:

@@ -3,8 +3,16 @@ name: Build
 on:
   push:
     branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'docs/**'
+      - 'blog/**'
+      - 'static/**'
+      - '*.js'
+      - '*.ts'
+      - '*.json'
+      - '*.yaml'
+      - '*.yml'
 
 jobs:
   build:
