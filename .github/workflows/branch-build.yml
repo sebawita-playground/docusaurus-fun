@@ -3,6 +3,16 @@ name: Build Branch
 on:
   push:
     branches-ignore: [ main ]
+    paths:
+      - 'src/**'
+      - 'docs/**'
+      - 'blog/**'
+      - 'static/**'
+      - '*.js'
+      - '*.ts'
+      - '*.json'
+      - '*.yaml'
+      - '*.yml'
 
 jobs:
   build:
@@ -11,18 +21,31 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
-        node-version: '20'
-        cache: 'npm'
+        node-version: '22'
+        package-manager-cache: false
+    - name: Enable Corepack
+      run: corepack enable
+    - name: Enable Namespace cache
+      uses: namespacelabs/nscloud-cache-action@v1
+      with:
+        cache: yarn
+
+    - name: Cache node_modules
+      uses: actions/cache@v4
+      with:
+        path: node_modules
+        key: node-modules-${{ hashFiles('yarn.lock') }}
+
     - name: Install dependencies
-      run: npm ci
+      run: yarn install --immutable
     - name: Build
-      run: npm run build
+      run: yarn build
     - name: Type check
-      run: npm run typecheck
+      run: yarn typecheck
     - name: Test
-      run: npm test -- --runInBand
+      run: yarn test -- --runInBand
     - name: Deploy to Netlify
       if: github.event_name == 'push'
       env:
