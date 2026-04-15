@@ -122,6 +122,10 @@ const config: Config = {
               label: 'X',
               href: 'https://x.com/docusaurus',
             },
+            {
+              label: 'Code of Conduct',
+              to: '/code-of-conduct',
+            },
           ],
         },
         {
