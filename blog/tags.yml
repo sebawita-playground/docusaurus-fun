@@ -17,3 +17,18 @@ hola:
   label: Hola
   permalink: /hola
   description: Hola tag description
+
+github-actions:
+  label: GitHub Actions
+  permalink: /github-actions
+  description: Tips and guides for GitHub Actions CI/CD workflows
+
+caching:
+  label: Caching
+  permalink: /caching
+  description: Strategies and best practices for build and dependency caching
+
+namespace:
+  label: Namespace
+  permalink: /namespace
+  description: Guides for using Namespace cloud runners and tooling

@@ -1,0 +1,258 @@
+---
+slug: namespace-caching-github-actions-best-practices
+title: "Best Practices for Caching with Namespace on GitHub Actions"
+authors: [yangshun]
+tags: [github-actions, caching, namespace]
+---
+
+Slow CI pipelines kill developer momentum. Waiting ten minutes for a build that should take two is frustrating — and it adds up fast across a team. Namespace's **Cache Volumes** solve this by giving your GitHub Actions runners persistent, NVMe-backed storage that's instantly accessible between runs, with no upload or download phases involved.
+
+This post walks through the best practices for getting the most out of Namespace caching in your workflows.
+
+{/* truncate */}
+
+## How Namespace Caching Works
+
+Traditional GitHub Actions caching (via `actions/cache`) works by compressing your cache, uploading it to blob storage at the end of a run, and downloading and decompressing it at the start of the next run. This takes time — sometimes as long as the build itself.
+
+Namespace Cache Volumes are different. They're persistent volumes that mount directly to your runner, so your `node_modules`, build outputs, or compiler caches are just *there* at the start of every run. No transfer overhead, no size penalty for large caches, and support for hundreds of GB with high concurrency.
+
+To use them, you need to:
+1. Enable caching on a **Runner Profile** in the [Namespace dashboard](https://cloud.namespace.so/workspace/actions/profiles)
+2. Add `namespacelabs/nscloud-cache-action@v1` to your workflow
+
+---
+
+## Best Practice Tips
+
+### 1. Use Framework-Native Cache Modes
+
+The `nscloud-cache-action` has built-in support for many ecosystems. Instead of specifying raw paths, use the named cache modes — they point to the right directories for each tool automatically:
+
+```yaml
+- name: Set up caches
+  uses: namespacelabs/nscloud-cache-action@v1
+  with:
+    cache: |
+      go
+      node
+```
+
+**Supported modes include:** Go, Yarn, PNPM, Bun, Rust, Python, Poetry, UV, Maven, Gradle, Nix, Deno, Playwright, Ruby, CocoaPods, SwiftPM, Mise, and more.
+
+Using named modes means you don't have to track framework-specific cache paths yourself, and you get correct behaviour automatically when paths change between tool versions.
+
+---
+
+### 2. Disable Built-in Caching in Setup Actions
+
+Most `actions/setup-*` actions have their own caching built in. When using Namespace Cache Volumes, turn that off — otherwise you'll pay the upload/download cost of the native cache on top of the volume cache:
+
+```yaml
+- name: Set up Go
+  uses: actions/setup-go@v5
+  with:
+    go-version: '1.22'
+    cache: false  # Let nscloud-cache-action handle this
+
+- name: Set up Go cache
+  uses: namespacelabs/nscloud-cache-action@v1
+  with:
+    cache: go
+```
+
+This is one of the most common mistakes when migrating to Namespace — keeping native caching enabled doubles the work without any benefit.
+
+---
+
+### 3. Always Place the Cache Action After Checkout
+
+The cache action works by bind-mounting directories on Linux (or symlinking on macOS). If you run it before `actions/checkout`, the checkout step will wipe those directories.
+
+Always order your steps like this:
+
+```yaml
+steps:
+  - name: Checkout
+    uses: actions/checkout@v4
+
+  - name: Set up cache  # Must come after checkout
+    uses: namespacelabs/nscloud-cache-action@v1
+    with:
+      cache: yarn
+
+  - name: Install dependencies
+    run: yarn install
+```
+
+---
+
+### 4. Cache Custom Paths for Non-Standard Toolchains
+
+For tools not covered by a named mode, use the `path` parameter to cache any directory you need:
+
+```yaml
+- name: Set up custom cache
+  uses: namespacelabs/nscloud-cache-action@v1
+  with:
+    path: |
+      ~/.cache/my-custom-tool
+      /opt/shared-libraries
+      ~/vendor
+```
+
+You can combine `cache` and `path` in the same step:
+
+```yaml
+- name: Set up caches
+  uses: namespacelabs/nscloud-cache-action@v1
+  with:
+    cache: go
+    path: ~/.cache/custom-linter
+```
+
+Note: paths inside `${{ runner.temp }}` cannot be cached.
+
+---
+
+### 5. Use `detect: true` to Automatically Enable Cache Modes
+
+If you're not sure which cache modes apply to your project, or you want a zero-maintenance setup, use `detect: true`. The action will inspect the environment and enable all matching modes:
+
+```yaml
+- name: Auto-configure caches
+  uses: namespacelabs/nscloud-cache-action@v1
+  with:
+    detect: true
+```
+
+This is a great default for polyglot repos or projects where the dependency stack evolves frequently.
+
+---
+
+### 6. Protect Your Main Branch Cache
+
+Cache pollution is a real problem — a bad `package.json` change on a feature branch can corrupt shared cache state. Namespace lets you restrict cache *writes* to specific branches while still allowing all branches to *read* from the cache.
+
+Configure `protected-branches` in your Runner Profile settings:
+
+```yaml
+protected-branches: main, release/*
+```
+
+With this in place:
+- `main` and `release/*` branches can update the cache
+- Pull requests and feature branches read from the cache but never write to it
+
+This keeps your cache stable and trustworthy for everyone.
+
+---
+
+### 7. Use Separate Runner Profiles for Container Jobs
+
+If your workflow runs jobs inside Docker containers, the cache setup requires additional permissions (`SYS_ADMIN` capability, plus `sudo`/`mkdir`/`chown` in the image). These requirements can conflict with standard non-container jobs.
+
+Avoid mixing container and non-container jobs in the same Runner Profile. Create a dedicated profile for container-based workflows so you can tune permissions independently without affecting your other pipelines.
+
+---
+
+### 8. Use `fail-on-cache-miss` to Catch Misconfigurations Early
+
+If your workflow *requires* a warm cache to function correctly (e.g., a job that restores build artifacts from a previous step), use the `fail-on-cache-miss` flag to fail fast:
+
+```yaml
+- name: Restore build output
+  uses: namespacelabs/nscloud-cache-action@v1
+  with:
+    path: dist/
+    fail-on-cache-miss: true
+```
+
+Without this, a cold cache will silently cause downstream steps to behave unexpectedly — often in ways that are hard to diagnose.
+
+---
+
+### 9. Debug Cache Issues with SSH Access
+
+If your cache isn't behaving as expected — wrong contents, unexpected misses, or permission errors — you can SSH directly into the cache volume to inspect it:
+
+```bash
+nsc create --volume cache:<tag>:/cache:<size>gb
+nsc ssh <instance-id>
+ls -al /cache
+```
+
+For interactive debugging during a live workflow run, use the [Breakpoint Action](https://github.com/namespacelabs/breakpoint-action):
+
+```yaml
+- name: Pause for inspection
+  uses: namespacelabs/breakpoint-action@v0
+  if: failure()
+```
+
+This opens an SSH tunnel into the runner so you can poke around in real time — invaluable when diagnosing cache-related failures.
+
+---
+
+### 10. Real-World Example: Caching Yarn Workspaces
+
+Here's a complete workflow for a large Yarn workspace monorepo (similar to the [namespace-integration-demos/cache-yarn-workspaces-material-ui](https://github.com/namespace-integration-demos/cache-yarn-workspaces-material-ui) demo):
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: namespace-profile-default  # Your Namespace runner profile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: false  # Disable native caching
+
+      - name: Set up Yarn cache
+        uses: namespacelabs/nscloud-cache-action@v1
+        with:
+          cache: yarn
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build
+        run: yarn build
+
+      - name: Test
+        run: yarn test
+```
+
+Key points in this example:
+- `cache: false` on `setup-node` prevents double-caching
+- The cache action runs after checkout but before install
+- `yarn install --frozen-lockfile` is safe because the cache already has `node_modules` from previous runs
+
+---
+
+## Summary
+
+| Practice | Why It Matters |
+|---|---|
+| Use named cache modes | Correct paths without manual maintenance |
+| Disable setup action caching | Avoid redundant upload/download overhead |
+| Place cache action after checkout | Prevents checkout from wiping cache mounts |
+| Protect main branch cache | Keeps shared cache stable across the team |
+| Use separate profiles for containers | Avoids permission conflicts |
+| Use `fail-on-cache-miss` for required caches | Catch misconfigurations immediately |
+| SSH into cache volumes to debug | Fast root-cause analysis |
+
+Namespace caching requires minimal configuration but pays off significantly in CI speed. Start with named framework modes, protect your main branch, and you'll have a fast, reliable pipeline with very little ongoing maintenance.
+
+For more details, see the [Namespace caching documentation](https://namespace.so/docs/solutions/github-actions/caching) and the [nscloud-cache-action reference](https://namespace.so/docs/actions/nscloud-cache-action).
