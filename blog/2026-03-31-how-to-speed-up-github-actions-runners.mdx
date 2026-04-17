@@ -1,0 +1,55 @@
+---
+slug: how-to-speed-up-github-actions-runners
+title: How to Speed Up GitHub Actions Runners
+authors:
+  - name: Zack Chase
+    title: Namespace
+date: 2026-03-31
+tags: [github-actions, ci, performance]
+---
+
+This guide addresses CI performance bottlenecks by presenting three key optimization strategies for GitHub Actions workflows using Namespace's infrastructure platform.
+
+{/* truncate */}
+
+## 1. Faster Hardware (Namespace Runners)
+
+The single highest-leverage change in most CI setups is running on faster hardware. Namespace provides 8 vCPU and 16 GB RAM runners — quadruple the CPU and double the memory of standard GitHub runners.
+
+Implementation requires only updating the `runs-on` label in your workflow files:
+
+```yaml
+# Before
+runs-on: ubuntu-latest
+
+# After
+runs-on: namespace-profile-<name>
+```
+
+This approach supports right-sizing resources per job, allowing teams to assign smaller configurations to lightweight tasks like linting and larger shapes to CPU-intensive compilation work.
+
+## 2. Cached Git Checkouts
+
+The `nscloud-checkout-action` eliminates repeated full repository clones by maintaining a persistent git mirror on cache volumes. For large monorepos with extensive history or LFS usage, this reduces checkout time from minutes to seconds by fetching only delta changes after initial setup.
+
+```yaml
+- uses: namespacelabs/nscloud-checkout-action@v1
+```
+
+The action supports multiple repository checkouts in single workflows and handles submodule updates through the same acceleration mechanism.
+
+## 3. Persistent Cache Volumes
+
+Unlike GitHub's tarball-based caching system, Namespace Cache Volumes are persistent volumes mounted directly to the runner via NVMe-backed local storage. This eliminates upload/download overhead and supports up to hundreds of gigabytes, compared to GitHub's 10 GB repository limit.
+
+```yaml
+- uses: namespacelabs/nscloud-cache-action@v1
+  with:
+    cache: go  # preset for Go; also supports node, rust, python
+```
+
+The `nscloud-cache-action` includes framework-specific presets for Go, Node.js, Rust, and Python, while supporting arbitrary path caching for custom tooling.
+
+## Expected Performance Gains
+
+Combined implementation can reduce a 20-minute pipeline to under 5 minutes through cumulative improvements across faster hardware, eliminated clones, and optimized caching.
