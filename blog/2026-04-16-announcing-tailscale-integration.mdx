@@ -1,0 +1,42 @@
+---
+slug: announcing-tailscale-integration
+title: "Tailscale Integration: Secure Access for Every Workload"
+authors:
+  - name: Zack Chase
+    title: Namespace
+date: 2026-04-16
+tags: [tailscale, ci, networking, security]
+---
+
+Namespace now integrates with Tailscale, enabling cloud workloads to securely access private infrastructure — no stored credentials, no exposed public endpoints.
+
+{/* truncate */}
+
+## How It Works
+
+Workloads use short-lived OIDC tokens to register with your tailnet, so no Tailscale auth key or client secret is stored anywhere. Setup takes three steps:
+
+1. Create OIDC credentials in the Tailscale admin console
+2. Store the configuration in Namespace
+3. Select the integration when creating your workload
+
+Workloads automatically inherit your existing ACL rules based on assigned tags, keeping security policies consistent across your network.
+
+## Devbox Capabilities
+
+Development boxes gain direct access to the private resources you actually use:
+
+- Staging databases, auth services, and private registries — no network mocking required
+- Stable tailnet addresses for local dev servers, no port forwarding needed
+- Team collaboration via pair debugging and shared environments
+
+## CI Runner Benefits
+
+Ephemeral runners can now:
+
+- Run integration tests against real private infrastructure
+- Execute database migrations on private systems
+- Deploy to internal servers
+- Pull from private artifact registries
+
+All without exposing public endpoints or maintaining self-hosted infrastructure.
