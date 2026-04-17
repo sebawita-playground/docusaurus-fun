@@ -5,7 +5,14 @@
  */
 
 @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
-@import '@fontsource/apfel-grotezk';
+@font-face {
+  font-family: 'Apfel Grotezk';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(https://cdn.jsdelivr.net/fontsource/fonts/apfel-grotezk@latest/latin-400-normal.woff2) format('woff2'),
+       url(https://cdn.jsdelivr.net/fontsource/fonts/apfel-grotezk@latest/latin-400-normal.woff) format('woff');
+}
 
 /* You can override the default Infima variables here. */
 :root {
