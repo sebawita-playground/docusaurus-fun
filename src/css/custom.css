@@ -30,10 +30,11 @@
 
 :root {
   --blog-letter-spacing: 0.018em;
+  --blog-font-size: 1.1rem;
 }
 
 p, li {
-  font-size: 1.1rem;
+  font-size: var(--blog-font-size);
   letter-spacing: var(--blog-letter-spacing);
 }
 
