@@ -1,0 +1,1 @@
+- feedback_use_yarn.md: Always use yarn instead of npm for package management in this project.
