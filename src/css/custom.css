@@ -28,6 +28,15 @@
   --ifm-font-family-base: 'Apfel Grotezk', sans-serif;
 }
 
+:root {
+  --blog-letter-spacing: 0.018em;
+}
+
+p, li {
+  font-size: 1.1rem;
+  letter-spacing: var(--blog-letter-spacing);
+}
+
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
   --ifm-color-primary: #25c2a0;
